@@ -8,7 +8,7 @@ and after sleep/wake, enabling DD and DD+ passthrough including DD+ Atmos.
 | Fire TV Cube 3 (`gazelle`) | Fire OS 7.7.0.2, PS7702/4965 |
 | Fire TV Stick 4K Max 2 (`karat`) | Fire OS 8.1.8.2, RS8182.3811N |
 
-Version **0.3.0**. Root and Magisk are required. Karat installation accepts only
+Version **0.3.1**. Root and Magisk are required. Karat installation accepts only
 the exact utility hashes documented in [Karat utility details](#karat-utility). Gazelle's
 installer checks the device and utility presence, not the entire firmware build;
 other builds have not been validated here.
@@ -76,20 +76,30 @@ the Karat abort. Disable/remove and reboot to remove the overlay and boot handli
 
 ## Build from source
 
-Requires Python 3.9+ and a POSIX shell. No Python packages are needed. Supply a
-local copy of the **stock** Karat `/system/bin/aparam` with the documented hash.
-If the module is already installed, the visible utility may be the patched overlay;
-use your original backup or stock firmware copy. This binary is not in the repo.
+Requires Python 3.9+ and a POSIX shell. No firmware binaries or Python packages
+are needed to build the module.
 
 ```sh
-python3 build.py --karat-aparam /path/to/stock/karat/aparam
+python3 build.py
 ```
 
-The builder removes the unused direct `libmediaplayerservice.so` dependency,
-verifies the exact tested output hash, and writes the ZIP and checksum to `dist/`.
-It preserves the tested v0.3.0 runtime scripts. The generated ZIP includes the
-corrected firmware utility; this repository contains only the patching source.
-Generating the overlay at installation time is a separate future change.
+The ZIP contains source scripts only. During installation on Karat, the installer
+copies the device's existing `/system/bin/aparam`, removes the unused direct
+`libmediaplayerservice.so` dependency, verifies the exact tested output hash, and
+places the result in the Magisk overlay. It accepts either the supported stock
+utility or an already-corrected overlay when upgrading. The original file is never
+modified. Gazelle continues to use its own stock utility.
+
+For developers, `scripts/patch_karat_aparam.py` is an independent ELF-aware reference
+implementation. `tests/test_patch.py --stock /path/to/stock/aparam` compares the shell
+patch with that implementation, checks upgrades from the corrected binary, and
+verifies rejection of unsupported input. Test binaries stay outside the repo.
+
+Release checks passed for stock-to-corrected patching, upgrades from the corrected
+utility, unchanged inputs, unsupported-input rejection and temporary-file cleanup.
+The exact installer was also rehearsed in isolated directories on Karat and Gazelle
+using Magisk BusyBox. Karat produced the verified hash and queried the audio mode
+without the previous mutex abort. These checks did not replace the live modules.
 
 ## Related module
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Generate the verified Karat overlay from the device's own utility at installation.
+- Remove the firmware binary from the module ZIP and build inputs.
+- Preserve the v0.3.0 boot/resume behavior and corrected utility bytes.
+- Accept the supported stock utility and already-corrected overlay for upgrades.
+
 ## 0.3.0
 
 - Maintain HDMI bypass after boot and screen-on/resume events.

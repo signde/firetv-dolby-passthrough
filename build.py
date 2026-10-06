@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the tested Dolby module from source and a local stock Karat utility."""
+"""Build the Dolby module without bundling firmware binaries."""
 from pathlib import Path
 import hashlib
 import shutil
@@ -48,19 +48,12 @@ def archive(stage, name):
     print('SHA256', digest)
 
 def main():
-    import argparse
-    from scripts.patch_karat_aparam import patch
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--karat-aparam', required=True, type=Path,
-                        help='Local stock /system/bin/aparam from the supported Karat firmware')
-    args = parser.parse_args()
-    patched = patch(args.karat_aparam.read_bytes())
     stage = stage_files(['module.prop', 'service.sh', 'customize.sh',
                          'README.md', 'CHANGELOG.md', 'LICENSE', 'NOTICE.md',
-                         'build.py', 'scripts/patch_karat_aparam.py'])
-    (stage / 'payload').mkdir()
-    (stage / 'payload/aparam-karat').write_bytes(patched)
-    archive(stage, 'firetv-dolby-passthrough-v0.3.0.zip')
+                         'build.py', 'scripts/patch_karat_aparam.py',
+                         'scripts/patch_karat_aparam.sh'])
+    subprocess.run(['sh', '-n', str(stage/'scripts/patch_karat_aparam.sh')], check=True)
+    archive(stage, 'firetv-dolby-passthrough-v0.3.1.zip')
 
 if __name__ == '__main__':
     main()

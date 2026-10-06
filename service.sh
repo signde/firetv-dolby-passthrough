@@ -23,7 +23,7 @@ read_mode() {
 }
 
 DEVICE=$(/system/bin/getprop ro.product.device)
-log "Startup v0.3.0: $DEVICE $(/system/bin/getprop ro.build.display.id)"
+log "Startup v0.3.1: $DEVICE $(/system/bin/getprop ro.build.display.id)"
 case "$DEVICE" in
     gazelle) ;;
     karat)
