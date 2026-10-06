@@ -1,0 +1,6 @@
+id=gazelle_ddplus_bypass
+name=Fire TV Dolby Digital & DD+ Passthrough
+version=0.3.0
+versionCode=5
+author=signde
+description=Maintains HDMI BYPASS after startup and sleep/wake on Cube 3 (gazelle) and Stick 4K Max 2 (karat). Includes a corrected aparam for supported Karat builds.
