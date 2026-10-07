@@ -63,12 +63,15 @@ For immediate manual bypass, run `aparam set 0 hdmi_format=6` from a root shell.
 The default mode is `aparam set 0 hdmi_format=5`. Disable the module before
 intentionally selecting another mode.
 
-## Reported app limitation
+## Movistar Plus+ community result
 
-A community report on Cube 3 PS7704 describes Movistar Plus+ changing from DD+
-in mode 5 to stereo PCM in mode 6. This has not been reproduced locally; the
-original input format and cause remain under investigation. This release improves
-mode recovery, not that app-specific behavior.
+[CMBoii's follow-up on Cube 3 PS7704](https://xdaforums.com/t/mod-magisk-root-fireos-7-8-dolby-dd-dd-and-dts-hd-ma-dts-x-passthrough-modules.4804107/post-90767387)
+resolved the earlier stereo-output report. His reported captures show movie
+playback supplying E-AC3, six channels, in both modes; in bypass mode the Denon
+receives DD+. The tested live channels instead supplied AAC stereo in both modes,
+with AVR upmixing explaining the earlier surround impression. This is community
+verification of those streams, not a local reproduction or a guarantee for all
+Movistar content. No module change was needed for the reported issue.
 
 ## Karat utility
 
