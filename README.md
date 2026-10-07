@@ -1,21 +1,26 @@
 # Fire TV Dolby Digital & DD+ Passthrough
 
 Magisk module that maintains Fire OS HDMI bypass (`hdmi_format=6`) at boot
-and after sleep/wake, enabling DD and DD+ passthrough including DD+ Atmos.
+and after sleep/wake or service restarts, enabling DD and DD+ passthrough including DD+ Atmos.
 
 | Device | Playback-tested build |
 | --- | --- |
-| Fire TV Cube 3 (`gazelle`) | Fire OS 7.7.0.2, PS7702/4965 |
+| Fire TV Cube 3 (`gazelle`) | Fire OS 7.7.0.2, PS7702/4965; 7.7.1.4, PS7714/5506; 7.7.1.7, PS7717/5741 |
 | Fire TV Stick 4K Max 2 (`karat`) | Fire OS 8.1.8.2, RS8182.3811N |
 
-Version **0.3.1**. Root and Magisk are required. Karat installation accepts only
+Version **0.3.2**. Root and Magisk are required. Karat installation accepts only
 the exact utility hashes documented in [Karat utility details](#karat-utility). Gazelle's
 installer checks the device and utility presence, not the entire firmware build;
-other builds have not been validated here.
+other builds have not been validated here. The new restart recovery passed controlled framework/audio restarts on Gazelle
+PS7714.5506N. PS7717.5741N also passed framework-restart and sleep/wake
+recovery with receiver-confirmed playback, and the user confirmed its manual
+audio/video check passed. The Karat playback result predates v0.3.2; the new
+restart recovery has not been hardware-retested there.
 
 ## Installation and use
 
-Install a built module ZIP from Magisk, then reboot. Select **Best Available**
+Install the [v0.3.2 module ZIP](https://github.com/signde/firetv-dolby-passthrough/releases/download/v0.3.2/firetv-dolby-passthrough-v0.3.2.zip)
+from Magisk, then reboot. Select **Best Available**
 in Fire OS and enable passthrough in your player. Allow about one minute after
 boot for bypass to apply. The installer does not support recovery installation.
 GitHub's automatic source ZIP is not an installable module ZIP.
@@ -27,9 +32,10 @@ aparam get 0 hdmi_format
 # Expected: hdmi_format=6
 ```
 
-Boot and resume trigger bounded follow-up checks. There are no periodic HDMI
-queries while idle. An HDMI reset without a screen-on event is not covered.
-Manual output-mode changes may be overridden on boot/resume. Disable/remove the
+Boot, resume and service restart events trigger bounded follow-up checks. There
+are no periodic HDMI queries while idle. Resets without a watched event, or after
+its bounded follow-up window, are not covered. Manual output-mode changes may
+be overridden following these events. Disable/remove the
 module in Magisk and reboot to undo it. Revalidate compatibility after firmware
 updates. Disable the module before upgrading firmware.
 
@@ -37,12 +43,14 @@ updates. Disable the module before upgrading firmware.
 
 After `sys.boot_completed=1`, the service waits 60 seconds for Fire OS audio
 preferences, applies bypass, and checks again at +5 and +20 seconds. It then
-blocks on Android's `power_screen_state` event stream. Screen-on/resume triggers
-checks at 0, 5 and 20 seconds, including exit from dreams when Fire OS emits that
-event. There is no wake lock. Each check verifies the live audio-service readback.
+blocks on filtered Android events and main logs. `power_screen_state` screen-on
+events trigger checks at 0, 5 and 20 seconds. `boot_progress_enable_screen` after
+framework startup and `AudioService: Audioserver started.` after audio-server
+recovery trigger checks at 0, 5, 20 and 60 seconds. The later check covers delayed
+saved-preference resets. There is no wake lock. Each check verifies live readback.
 
 Audio-service failures are retried within those bounded checks, then on the next
-resume. A failed event stream reconnects after 30 seconds. Disabling/removing the
+watched event. A failed event stream reconnects after 30 seconds. Disabling/removing the
 module stops writes at the next event/check; reboot ends the listener and removes
 the Karat overlay. App and receiver passthrough support are still required.
 
@@ -54,6 +62,13 @@ Logs are under `/data/adb/modules/gazelle_ddplus_bypass/`:
 For immediate manual bypass, run `aparam set 0 hdmi_format=6` from a root shell.
 The default mode is `aparam set 0 hdmi_format=5`. Disable the module before
 intentionally selecting another mode.
+
+## Reported app limitation
+
+A community report on Cube 3 PS7704 describes Movistar Plus+ changing from DD+
+in mode 5 to stereo PCM in mode 6. This has not been reproduced locally; the
+original input format and cause remain under investigation. This release improves
+mode recovery, not that app-specific behavior.
 
 ## Karat utility
 
@@ -80,6 +95,7 @@ Requires Python 3.9+ and a POSIX shell. No firmware binaries or Python packages
 are needed to build the module.
 
 ```sh
+python3 tests/test_recovery.py
 python3 build.py
 ```
 

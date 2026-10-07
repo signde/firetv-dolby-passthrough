@@ -51,9 +51,10 @@ def main():
     stage = stage_files(['module.prop', 'service.sh', 'customize.sh',
                          'README.md', 'CHANGELOG.md', 'LICENSE', 'NOTICE.md',
                          'build.py', 'scripts/patch_karat_aparam.py',
-                         'scripts/patch_karat_aparam.sh'])
+                         'scripts/patch_karat_aparam.sh', 'scripts/recovery.sh'])
     subprocess.run(['sh', '-n', str(stage/'scripts/patch_karat_aparam.sh')], check=True)
-    archive(stage, 'firetv-dolby-passthrough-v0.3.1.zip')
+    subprocess.run(['sh', '-n', str(stage/'scripts/recovery.sh')], check=True)
+    archive(stage, 'firetv-dolby-passthrough-v0.3.2.zip')
 
 if __name__ == '__main__':
     main()

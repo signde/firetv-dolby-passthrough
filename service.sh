@@ -23,7 +23,7 @@ read_mode() {
 }
 
 DEVICE=$(/system/bin/getprop ro.product.device)
-log "Startup v0.3.1: $DEVICE $(/system/bin/getprop ro.build.display.id)"
+log "Startup v0.3.2: $DEVICE $(/system/bin/getprop ro.build.display.id)"
 case "$DEVICE" in
     gazelle) ;;
     karat)
@@ -57,49 +57,12 @@ while [ "$settle" -lt 12 ]; do
     sleep 5
     settle=$((settle + 1))
 done
-# Only bounded checks after boot or a resume event. Nothing queries the HAL
-# while the event reader is idle, and neither the reader nor sleeps hold a wake lock.
-wait_enabled() {
-    remaining=$1
-    while [ "$remaining" -gt 0 ]; do
-        enabled || return 1
-        if [ "$remaining" -gt 5 ]; then chunk=5; else chunk=$remaining; fi
-        sleep "$chunk"
-        remaining=$((remaining - chunk))
-    done
-    enabled
-}
-
-reconcile() {
-    reason=$1
-    log "$reason: checking BYPASS now, then at +5s and +20s."
-    # No infinite retries if the HAL is unavailable or rejects the setting.
-    for delay in 0 5 15; do
-        wait_enabled "$delay" || return 1
-        mode=$(read_mode)
-        if [ -z "$mode" ]; then
-            log "$reason: audio service unavailable."
-            continue
-        fi
-        if [ "$mode" != 6 ]; then
-            log "$reason: applying BYPASS; observed hdmi_format=$mode"
-            timeout 5 /system/bin/aparam set 0 hdmi_format=6 >> "$MODDIR/boot.log" 2>&1
-            result=$?
-            mode=$(read_mode)
-            log "$reason: set exit=$result; readback hdmi_format='$mode'"
-        fi
-    done
-    if [ "$mode" = 6 ]; then
-        log "$reason checks complete: hdmi_format=6. Waiting for resume."
-    else
-        log "$reason checks failed: mode='$mode'. Will retry on the next resume."
-    fi
-}
+. "$MODDIR/scripts/recovery.sh"
 
 reconcile Boot || exit 0
 
-# Android event 2728 is emitted by PowerManagerService; [1,...] means on.
-# Read only that structured event from the events buffer. No log clearing.
+# Watch screen-on, framework startup, and audio-server recovery.
+# Filtering occurs in logcat; no log clearing or periodic HDMI queries.
 FIFO=/dev/firetv_audio_resume.$$.fifo
 EVENT_PID=
 cleanup() {
@@ -116,14 +79,14 @@ mkfifo "$FIFO" || { log "Cannot create resume event pipe."; exit 1; }
 while enabled; do
     # -T 1 also recovers the most recent event if the reader reconnects.
     # A replay may produce one harmless bounded reconciliation, not idle polling.
-    /system/bin/logcat -b events -v raw -T 1 power_screen_state:I '*:S' > "$FIFO" 2>> "$MODDIR/boot.log" 9>&- &
+    /system/bin/logcat -b events -b main -v brief -T 1 \
+        power_screen_state:I boot_progress_enable_screen:I AudioService:E '*:S' > "$FIFO" 2>> "$MODDIR/boot.log" 9>&- &
     EVENT_PID=$!
-    log "Resume listener started; no periodic HDMI checks."
+    log "Recovery listener started; no periodic HDMI checks."
     while IFS= read -r event; do
         enabled || break
-        case "$event" in
-            '[1,'*) reconcile Resume || break ;;
-        esac
+        reason=$(event_reason "$event") || continue
+        reconcile "$reason" || break
     done < "$FIFO"
     kill "$EVENT_PID" 2>/dev/null
     wait "$EVENT_PID" 2>/dev/null
